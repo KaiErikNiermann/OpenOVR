@@ -1,0 +1,62 @@
+name: Windows debug build
+
+on:
+  push:
+    branches:
+      - 'fix/**'
+      - openxr
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64]
+        config: [RelWithDebInfo]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download Vulkan minisdk (matches upstream AppVeyor recipe)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://znix.xyz/random/vulkan-1.1.85.0-minisdk.7z" -OutFile "vulkan.7z"
+          7z x -olibs vulkan.7z
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -B build -S . -A ${{ matrix.platform }} `
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }} `
+            -DOC_VERSION="${{ github.sha }} (${{ matrix.config }} debug build from ${{ github.ref_name }})"
+
+      - name: Build (all targets, so we get vrclient_x64.dll + pdb)
+        shell: pwsh
+        run: |
+          cmake --build build --config ${{ matrix.config }} -- /m
+
+      - name: Show what got built
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse build/bin -Include *.dll,*.pdb,*.exe | Format-Table FullName,Length
+
+      - name: Rename vrclient_x64.dll to openvr_api.dll (as upstream does)
+        shell: pwsh
+        run: |
+          $cfg = "${{ matrix.config }}"
+          if (Test-Path "build/bin/$cfg/vrclient_x64.dll") {
+            Copy-Item "build/bin/$cfg/vrclient_x64.dll" "build/bin/$cfg/openvr_api.dll"
+          }
+
+      - name: Upload DLL + PDB artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openvr_api-${{ matrix.platform }}-${{ matrix.config }}
+          path: |
+            build/bin/${{ matrix.config }}/openvr_api.dll
+            build/bin/${{ matrix.config }}/vrclient_x64.dll
+            build/bin/${{ matrix.config }}/vrclient_x64.pdb
+          if-no-files-found: error
