@@ -33,10 +33,10 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} `
             -DOC_VERSION="${{ github.sha }} (${{ matrix.config }} debug build from ${{ github.ref_name }})"
 
-      - name: Build vrclient_x64 only (skip RuntimeSwitcher .NET GUI which lacks RelWithDebInfo)
+      - name: Build OCOVR only (target name; output file is vrclient_x64.dll, skips RuntimeSwitcher .NET GUI)
         shell: pwsh
         run: |
-          cmake --build build --config ${{ matrix.config }} --target vrclient_x64 -- /m
+          cmake --build build --config ${{ matrix.config }} --target OCOVR -- /m
 
       - name: Show what got built
         shell: pwsh
