@@ -1000,8 +1000,11 @@ void BaseInput::LoadBindingsSet(const InteractionProfile& profile, const std::st
 			if (action == nullptr)
 				OOVR_ABORTF("Missing haptic action '%s' in bindings file '%s'", actionName.c_str(), bindingsPath.c_str());
 
+			// Profiles without haptics (hand interaction) have no output path, which is not an error in the bindings
 			if (!profile.IsInputPathValid(pathStr)) {
-				OOVR_ABORTF("Built invalid input path %s from pose action %s", pathStr.c_str(), actionName.c_str());
+				OOVR_LOGF("WARNING: Built invalid haptic path %s for profile %s from action %s, skipping",
+				    pathStr.c_str(), profile.GetPath().c_str(), actionName.c_str());
+				continue;
 			}
 
 			XrPath path;
