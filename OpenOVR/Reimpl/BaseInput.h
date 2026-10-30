@@ -823,6 +823,9 @@ private:
 
 	LegacyControllerActions legacyControllers[2] = {};
 
+	void logHandPoseSample(ITrackedDevice::TrackedDeviceType hand, const std::shared_ptr<ITrackedDevice>& dev,
+	    bool usingFakePose, EVRSkeletalTransformSpace space, EVRSkeletalMotionRange range,
+	    const VRBoneTransform_t& wrist);
 	static bool XrHandJointsToSkeleton(const std::vector<XrHandJointLocationEXT>& joints, bool isRight, VRBoneTransform_t* output, glm::mat4 transform);
 	static void ParentSpaceSkeletonToModelSpace(VRBoneTransform_t* joints);
 

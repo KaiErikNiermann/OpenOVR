@@ -11,6 +11,7 @@
 #include "Drivers/Backend.h"
 #include "generated/static_bases.gen.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <codecvt>
 #include <cstdint>
@@ -2061,6 +2062,47 @@ EVRInputError BaseInput::GetSkeletalBoneData(VRActionHandle_t action, EVRSkeleta
 	return GetSkeletalBoneData(action, eTransformSpace, eMotionRange, pTransformArray, unTransformArrayCount);
 }
 
+// Logs, every two seconds per hand, what a game gets for a tracked hand: the controller pose, the wrist bone
+// relative to it, and the runtime's wrist joint in the same (floor) space, so a misplaced hand can be traced to
+// OpenComposite or to the game. Off unless OOVR_LOG_HAND_POSES is set.
+void BaseInput::logHandPoseSample(ITrackedDevice::TrackedDeviceType hand, const std::shared_ptr<ITrackedDevice>& dev,
+    bool usingFakePose, EVRSkeletalTransformSpace space, EVRSkeletalMotionRange range, const VRBoneTransform_t& wrist)
+{
+	static const bool enabled = std::getenv("OOVR_LOG_HAND_POSES") != nullptr;
+	static std::chrono::steady_clock::time_point last[2];
+	if (!enabled)
+		return;
+	auto now = std::chrono::steady_clock::now();
+	if (now - last[hand] < std::chrono::seconds(2))
+		return;
+	last[hand] = now;
+
+	vr::TrackedDevicePose_t pose = {};
+	dev->GetPose(vr::TrackingUniverseStanding, &pose, ETrackingStateType::TrackingStateType_Now);
+	glm::mat4 device = S2G_m34(pose.mDeviceToAbsoluteTracking);
+	glm::quat deviceRot(device);
+
+	XrHandJointsLocateInfoEXT locateInfo = { XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT };
+	locateInfo.baseSpace = xr_gbl->floorSpace;
+	locateInfo.time = xr_gbl->GetBestTime();
+	XrHandJointLocationsEXT locations = { XR_TYPE_HAND_JOINT_LOCATIONS_EXT };
+	std::vector<XrHandJointLocationEXT> joints(XR_HAND_JOINT_COUNT_EXT);
+	locations.jointCount = joints.size();
+	locations.jointLocations = joints.data();
+	XrPosef xrWrist = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
+	if (XR_SUCCEEDED(xr_ext->xrLocateHandJointsEXT(handTrackers[hand], &locateInfo, &locations)))
+		xrWrist = joints[XR_HAND_JOINT_WRIST_EXT].pose;
+
+	OOVR_LOGF("hand %d fake=%d valid=%d space=%d range=%d device p=(%.3f %.3f %.3f) q=(w%.3f %.3f %.3f %.3f) "
+	          "wristbone p=(%.3f %.3f %.3f) q=(w%.3f %.3f %.3f %.3f) xrwrist p=(%.3f %.3f %.3f) q=(w%.3f %.3f %.3f %.3f)",
+	    hand, usingFakePose, pose.bPoseIsValid, space, range,
+	    device[3][0], device[3][1], device[3][2], deviceRot.w, deviceRot.x, deviceRot.y, deviceRot.z,
+	    wrist.position.v[0], wrist.position.v[1], wrist.position.v[2],
+	    wrist.orientation.w, wrist.orientation.x, wrist.orientation.y, wrist.orientation.z,
+	    xrWrist.position.x, xrWrist.position.y, xrWrist.position.z,
+	    xrWrist.orientation.w, xrWrist.orientation.x, xrWrist.orientation.y, xrWrist.orientation.z);
+}
+
 EVRInputError BaseInput::GetSkeletalBoneData(VRActionHandle_t actionHandle, EVRSkeletalTransformSpace eTransformSpace,
     EVRSkeletalMotionRange eMotionRange, VR_ARRAY_COUNT(unTransformArrayCount) VRBoneTransform_t* pTransformArray, uint32_t unTransformArrayCount)
 {
@@ -2126,6 +2168,8 @@ EVRInputError BaseInput::GetSkeletalBoneData(VRActionHandle_t actionHandle, EVRS
 			wrist.orientation = { -0.055147f, -0.078608f, -0.920279f, 0.379296f };
 		}
 	}
+
+	logHandPoseSample(hand, dev, usingFakePose, eTransformSpace, eMotionRange, pTransformArray[eBone_Wrist]);
 
 	if (eTransformSpace == EVRSkeletalTransformSpace::VRSkeletalTransformSpace_Model)
 		ParentSpaceSkeletonToModelSpace(pTransformArray);
