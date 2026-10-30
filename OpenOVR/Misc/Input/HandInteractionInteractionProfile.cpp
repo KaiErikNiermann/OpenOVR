@@ -5,6 +5,11 @@
 #include "stdafx.h"
 
 #include "HandInteractionInteractionProfile.h"
+#include "logging.h"
+
+#include <convert.h>
+#include <cstdlib>
+#include <cstring>
 
 HandInteractionInteractionProfile::HandInteractionInteractionProfile()
 {
@@ -42,6 +47,23 @@ HandInteractionInteractionProfile::HandInteractionInteractionProfile()
 		{ "grip/click", "grasp_ext/value" },
 		{ "grip/touch", "grasp_ext/ready_ext" },
 	};
+
+	// Games that ship Index bindings place their hand models at the SteamVR controller pose, so give the hand the
+	// Index's grip-to-SteamVR offset (IndexControllerInteractionProfile) unless OOVR_HAND_GRIP_TRANSFORM=identity
+	const char* mode = std::getenv("OOVR_HAND_GRIP_TRANSFORM");
+	bool identity = mode && std::strcmp(mode, "identity") == 0;
+	OOVR_LOGF("Hand interaction grip-to-SteamVR transform: %s", identity ? "identity" : "index");
+	if (identity)
+		return;
+
+	glm::mat4 inverseGripTransformLeft = GetMat4x4FromOriginAndEulerRotations(
+	    { 0.0, -0.015, 0.13 },
+	    { 15.392, -2.071, 0.303 });
+	glm::mat4 inverseGripTransformRight = GetMat4x4FromOriginAndEulerRotations(
+	    { 0.0, -0.015, 0.13 },
+	    { 15.392, 2.071, -0.303 });
+	leftHandGripTransform = glm::affineInverse(inverseGripTransformLeft);
+	rightHandGripTransform = glm::affineInverse(inverseGripTransformRight);
 }
 
 const std::string& HandInteractionInteractionProfile::GetPath() const
