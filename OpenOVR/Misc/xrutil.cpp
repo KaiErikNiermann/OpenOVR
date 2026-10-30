@@ -37,6 +37,8 @@ XrExt::XrExt(XrGraphicsApiSupportedFlags apis, const std::vector<const char*>& e
 			hasHandTracking = true;
 		if (strcmp(ext, XR_EXT_HP_MIXED_REALITY_CONTROLLER_EXTENSION_NAME) == 0)
 			supportsG2Controller = true;
+		if (strcmp(ext, OOVR_EXT_HAND_INTERACTION_EXTENSION_NAME) == 0)
+			supportsHandInteraction = true;
 		if (strcmp(ext, XR_MNDX_XDEV_SPACE_EXTENSION_NAME) == 0)
 			xdevSpace = true;
 	}

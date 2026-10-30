@@ -9,6 +9,7 @@
 #include "HolographicInteractionProfile.h"
 #include "IndexControllerInteractionProfile.h"
 #include "InteractionProfile.h"
+#include "HandInteractionInteractionProfile.h"
 #include "KhrSimpleInteractionProfile.h"
 #include "OculusInteractionProfile.h"
 #include "ReverbG2InteractionProfile.h"
@@ -110,6 +111,8 @@ const InteractionProfile::ProfileList& InteractionProfile::GetProfileList()
 		profiles.emplace_back(std::make_unique<ViveWandInteractionProfile>());
 		profiles.emplace_back(std::make_unique<OculusTouchInteractionProfile>());
 		profiles.emplace_back(std::make_unique<KhrSimpleInteractionProfile>());
+		if (xr_ext->HandInteraction_Available())
+			profiles.emplace_back(std::make_unique<HandInteractionInteractionProfile>());
 		profiles.emplace_back(std::make_unique<ViveTrackerInteractionProfile>());
 	}
 	return profiles;

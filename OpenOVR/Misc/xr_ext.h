@@ -61,11 +61,15 @@ static const XrGraphicsApiSupportedFlags XR_SUPPORTED_GRAPHICS_API_VK = 0x0010;
  *
  * See https://github.com/microsoft/OpenXR-MixedReality/issues/32
  */
+// Not in the bundled OpenXR SDK's headers yet
+#define OOVR_EXT_HAND_INTERACTION_EXTENSION_NAME "XR_EXT_hand_interaction"
+
 class XrExt {
 public:
 	XrExt(XrGraphicsApiSupportedFlags apis, const std::vector<const char*>& extensions);
 
 	bool G2Controller_Available() { return supportsG2Controller; }
+	bool HandInteraction_Available() { return supportsHandInteraction; }
 	bool xrGetVisibilityMaskKHR_Available() { return pfnXrGetVisibilityMaskKHR != nullptr; }
 	bool xrMndxXdevSpace_Available() { return pfnxrCreateXDevSpaceMNDX != nullptr; }
 
@@ -221,6 +225,7 @@ private:
 	PFN_xrCreateXDevSpaceMNDX pfnxrCreateXDevSpaceMNDX = nullptr;
 
 	bool supportsG2Controller = false;
+	bool supportsHandInteraction = false;
 
 #if defined(SUPPORT_DX) && defined(SUPPORT_DX11)
 	PFN_xrGetD3D11GraphicsRequirementsKHR pfnXrGetD3D11GraphicsRequirementsKHR = nullptr;

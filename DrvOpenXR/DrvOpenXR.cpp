@@ -229,6 +229,10 @@ IBackend* DrvOpenXR::CreateOpenXRBackend(const char* startupInfo)
 	if (availableExtensions.contains(XR_EXT_HP_MIXED_REALITY_CONTROLLER_EXTENSION_NAME))
 		extensions.push_back(XR_EXT_HP_MIXED_REALITY_CONTROLLER_EXTENSION_NAME);
 
+	// Tracked hands as controllers: without it a hand has no grip pose, and the skeleton falls back to constants
+	if (availableExtensions.contains(OOVR_EXT_HAND_INTERACTION_EXTENSION_NAME))
+		extensions.push_back(OOVR_EXT_HAND_INTERACTION_EXTENSION_NAME);
+
 	const char* const layers[] = {
 #ifdef XR_VALIDATION_LAYER_PATH
 		"XR_APILAYER_LUNARG_core_validation",
