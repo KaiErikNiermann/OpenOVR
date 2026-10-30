@@ -1171,12 +1171,20 @@ void XrBackend::BindInfoSet()
 
 		std::vector<XrActionSuggestedBinding> bindings;
 		using namespace std::string_literals;
-		// grabs the first found paths ending in /click for each subaction path
+		// grabs the first found paths ending in /click for each subaction path, or /value for profiles with no
+		// buttons (hand interaction); the runtime thresholds a float bound to a boolean action
 		for (const std::string& path_name : { "/user/hand/left"s, "/user/hand/right"s }) {
-			auto click_path = std::ranges::find_if(profile->GetValidInputPaths(),
-			    [&path_name](std::string s) -> bool {
-				    return s.find("/click") != s.npos && s.find(path_name) != s.npos;
-			    });
+			const auto& inputs = profile->GetValidInputPaths();
+			auto find_input = [&](const char* component) {
+				return std::ranges::find_if(inputs, [&](const std::string& s) -> bool {
+					return s.find(component) != s.npos && s.find(path_name) != s.npos;
+				});
+			};
+			auto click_path = find_input("/click");
+			if (click_path == inputs.end())
+				click_path = find_input("/value");
+			if (click_path == inputs.end())
+				continue;
 			XrPath path;
 			OOVR_FAILED_XR_ABORT(xrStringToPath(xr_instance, click_path->c_str(), &path));
 			bindings.push_back({ .action = infoAction, .binding = path });
